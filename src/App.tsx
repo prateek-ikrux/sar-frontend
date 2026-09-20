@@ -1,13 +1,11 @@
-import { useState } from 'react'
+import { RouterProvider } from "react-router"
+import { Providers } from "@/app/providers"
+import { router } from "@/app/router"
 
-function App() {
-  const [count, setCount] = useState(0)
-
+export default function App() {
   return (
-    <>
-      
-    </>
+    <Providers>
+      <RouterProvider router={router} />
+    </Providers>
   )
 }
-
-export default App
