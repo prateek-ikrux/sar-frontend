@@ -1,27 +1,32 @@
 import urls from "@/constants/urls"
-import { api } from "@/lib/api"
-import type { Role, User } from "@/types"
+import { api, unwrap } from "@/lib/api"
+import type { ApiEnvelope, Role, User, UserPage } from "@/types"
 
-export async function listUsers(): Promise<User[]> {
-  const { data } = await api.get<{ users: User[] }>(urls.getUsers)
-  return data.users
+export async function listUsers(params?: {
+  page?: number
+  limit?: number
+}): Promise<UserPage> {
+  return unwrap(await api.get<ApiEnvelope<UserPage>>(urls.getUsers, { params }))
+}
+
+export async function getUser(id: string): Promise<User> {
+  return unwrap(await api.get<ApiEnvelope<User>>(urls.getUser(id)))
 }
 
 export async function createUser(input: {
   email: string
-  name?: string
+  name: string
   role?: Role
 }): Promise<User> {
-  const { data } = await api.post<{ user: User }>(urls.createUser, input)
-  return data.user
+  return unwrap(await api.post<ApiEnvelope<User>>(urls.createUser, input))
 }
 
+/** Partial update. The server rejects a patch that touches none of the three. */
 export async function updateUser(
   id: string,
-  patch: { active?: boolean; role?: Role }
+  patch: { name?: string; role?: Role; active?: boolean }
 ): Promise<User> {
-  const { data } = await api.put<{ user: User }>(urls.updateUser(id), patch)
-  return data.user
+  return unwrap(await api.put<ApiEnvelope<User>>(urls.updateUser(id), patch))
 }
 
 export async function deleteUser(id: string): Promise<void> {

@@ -10,7 +10,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
       <QueryClientProvider client={queryClient}>
         {children}
-        <Toaster position="bottom-right" />
+        <Toaster position="top-center" />
       </QueryClientProvider>
     </ThemeProvider>
   )

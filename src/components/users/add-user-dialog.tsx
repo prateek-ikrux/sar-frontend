@@ -25,7 +25,7 @@ export function AddUserDialog() {
   const queryClient = useQueryClient()
 
   const add = useMutation({
-    mutationFn: () => createUser({ email, name: name || undefined }),
+    mutationFn: () => createUser({ email: email.trim(), name: name.trim() }),
     onSuccess: (user) => {
       queryClient.invalidateQueries({ queryKey: ["users"] })
       toast.success(`${user.email} can now sign in.`)
@@ -33,7 +33,8 @@ export function AddUserDialog() {
       setEmail("")
       setName("")
     },
-    onError: (error: ApiError) => toast.error(error.message),
+    onError: (error: ApiError) =>
+      toast.error(error.message, { description: error.detail }),
   })
 
   return (
@@ -46,7 +47,7 @@ export function AddUserDialog() {
         <form
           onSubmit={(event) => {
             event.preventDefault()
-            if (email.trim()) add.mutate()
+            if (email.trim() && name.trim()) add.mutate()
           }}
         >
           <DialogHeader>
@@ -71,13 +72,12 @@ export function AddUserDialog() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="new-user-name">
-                Name <span className="text-muted-foreground">(optional)</span>
-              </Label>
+              <Label htmlFor="new-user-name">Name</Label>
               <Input
                 id="new-user-name"
+                required
                 value={name}
-                placeholder="Leave blank to fill in later"
+                placeholder="Their full name"
                 onChange={(event) => setName(event.target.value)}
               />
             </div>
@@ -91,7 +91,10 @@ export function AddUserDialog() {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={!email.trim() || add.isPending}>
+            <Button
+              type="submit"
+              disabled={!email.trim() || !name.trim() || add.isPending}
+            >
               {add.isPending && <Loader2 className="animate-spin" />}
               Add user
             </Button>

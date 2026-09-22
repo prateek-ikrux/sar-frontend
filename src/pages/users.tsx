@@ -1,27 +1,36 @@
-import { useQuery } from "@tanstack/react-query"
-import { TriangleAlert } from "lucide-react"
+import { useState } from "react"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { ChevronLeft, ChevronRight, TriangleAlert } from "lucide-react"
 
 import { AddUserDialog } from "@/components/users/add-user-dialog"
 import { UsersTable } from "@/components/users/users-table"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { listUsers } from "@/services/users"
 import type { ApiError } from "@/lib/api"
-import type { User } from "@/types"
+import type { UserPage } from "@/types"
 
 export default function UsersPage() {
-  const { data, isPending, error } = useQuery<User[], ApiError>({
-    queryKey: ["users"],
-    queryFn: listUsers,
+  const [page, setPage] = useState(1)
+
+  const { data, isPending, error } = useQuery<UserPage, ApiError>({
+    queryKey: ["users", page],
+    queryFn: () => listUsers({ page }),
+    // Keeps the table on screen while the next page loads, instead of
+    // collapsing back to skeletons on every click.
+    placeholderData: keepPreviousData,
   })
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-foreground">Users</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Users
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Anyone on this list can sign in with a code. Adding an email is all
-            it takes.
+            Everyone here can sign in with an emailed code. Admins can also
+            manage this list.
           </p>
         </div>
         <AddUserDialog />
@@ -41,13 +50,48 @@ export default function UsersPage() {
           <div className="space-y-0.5">
             <p className="font-medium text-foreground">Could not load users</p>
             <p className="text-sm text-muted-foreground">{error.message}</p>
+            {error.detail && (
+              <p className="text-sm text-muted-foreground">{error.detail}</p>
+            )}
           </div>
         </div>
       )}
 
-      {data && data.length > 0 && <UsersTable users={data} />}
+      {data && data.users.length > 0 && (
+        <div className="space-y-4">
+          <UsersTable users={data.users} />
 
-      {data && data.length === 0 && (
+          {data.pages > 1 && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Page {data.page} of {data.pages} &middot; {data.total} users
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={data.page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  <ChevronLeft />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={data.page >= data.pages}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                  <ChevronRight />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {data && data.users.length === 0 && (
         <div className="rounded-lg border border-dashed border-border px-6 py-14 text-center">
           <p className="font-medium text-foreground">No users yet</p>
           <p className="mt-1 text-sm text-muted-foreground">

@@ -46,7 +46,7 @@ function formatDate(value: string | null) {
 
 export function UsersTable({ users }: { users: User[] }) {
   const queryClient = useQueryClient()
-  const myId = useAuthStore((s) => s.user?.sub)
+  const myId = useAuthStore((s) => s.user?._id)
   const [pendingDelete, setPendingDelete] = useState<User | null>(null)
 
   const invalidate = () =>
@@ -63,7 +63,8 @@ export function UsersTable({ users }: { users: User[] }) {
           : `${user.email} can no longer sign in.`
       )
     },
-    onError: (error: ApiError) => toast.error(error.message),
+    onError: (error: ApiError) =>
+      toast.error(error.message, { description: error.detail }),
   })
 
   const remove = useMutation({
@@ -73,7 +74,8 @@ export function UsersTable({ users }: { users: User[] }) {
       toast.success(`${user.email} was removed.`)
       setPendingDelete(null)
     },
-    onError: (error: ApiError) => toast.error(error.message),
+    onError: (error: ApiError) =>
+      toast.error(error.message, { description: error.detail }),
   })
 
   return (

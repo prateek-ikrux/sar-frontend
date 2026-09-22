@@ -1,7 +1,7 @@
 const urls = {
   requestOtp: '/auth/request-otp',
   verifyOtp: '/auth/verify-otp',
-  getUsers: '/users',
+  getUsers: '/users/list',
   createUser: '/users/create',
   getUser: (id) => `/users/get/${id}`,
   updateUser: (id) => `/users/update/${id}`,

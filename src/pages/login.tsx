@@ -22,7 +22,7 @@ import {
 import { requestOtp, verifyOtp } from "@/services/auth"
 import { useAuthStore } from "@/stores/auth-store"
 import type { ApiError } from "@/lib/api"
-import logo from "@/assets/images/ikrux_logo_nobg.png"
+import { APP_NAME, Wordmark } from "@/components/brand/wordmark"
 
 const RESEND_SECONDS = 30
 const OTP_LENGTH = 6
@@ -30,7 +30,7 @@ const OTP_LENGTH = 6
 export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const setToken = useAuthStore((s) => s.setToken)
+  const setSession = useAuthStore((s) => s.setSession)
 
   const [step, setStep] = useState<"email" | "otp">("email")
   const [email, setEmail] = useState("")
@@ -54,18 +54,19 @@ export default function LoginPage() {
       setSecondsLeft(RESEND_SECONDS)
       toast.success(`We sent a code to ${email}.`)
     },
-    onError: (error: ApiError) => toast.error(error.message),
+    onError: (error: ApiError) =>
+      toast.error(error.message, { description: error.detail }),
   })
 
   const submitOtp = useMutation({
     mutationFn: (code: string) => verifyOtp(email.trim(), code),
-    onSuccess: (token) => {
-      setToken(token)
+    onSuccess: (session) => {
+      setSession(session)
       navigate(redirectTo, { replace: true })
     },
     onError: (error: ApiError) => {
       setOtp("")
-      toast.error(error.message)
+      toast.error(error.message, { description: error.detail })
     },
   })
 
@@ -78,15 +79,22 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-background px-4 py-10">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-background px-4 py-10">
+      <div className="flex flex-col items-center gap-2.5">
+        <Wordmark className="h-5" />
+        <p className="text-center text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+          {APP_NAME}
+        </p>
+      </div>
+
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <img src={logo} alt="ikrux" className="mb-2 h-7 w-auto" />
           {step === "email" ? (
             <>
               <CardTitle>Sign in</CardTitle>
               <CardDescription>
-                Enter your work email and we'll send you a sign-in code.
+                Enter your ikrux email and we&rsquo;ll send you a sign-in
+                code.
               </CardDescription>
             </>
           ) : (
@@ -181,6 +189,11 @@ export default function LoginPage() {
           )}
         </CardContent>
       </Card>
+
+      <p className="max-w-xs text-center text-xs text-muted-foreground">
+        Access is by invitation. If your address is not recognised, ask an
+        ikrux admin to add you.
+      </p>
     </div>
   )
 }

@@ -27,7 +27,9 @@
 
   --popover-foreground: oklch(0.145 0 0);
 
-  --primary: oklch(0.205 0 0);
+  /* ikrux teal, darkened from the wordmark #2a9187 so white button text
+     clears WCAG AA (4.74:1 against white). */
+  --primary: oklch(0.545 0.085 185.5);
 
   --primary-foreground: oklch(0.985 0 0);
 
@@ -45,7 +47,7 @@
 
   --input: oklch(0.922 0 0);
 
-  --ring: oklch(0.708 0 0);
+  --ring: oklch(0.597 0.093 185.6);
 
   --chart-1: oklch(0.87 0 0);
 
@@ -77,6 +79,8 @@
 }
 
 @theme inline {
+  /* The teal straight off the wordmark, for accents that are not --primary. */
+  --color-brand: oklch(0.597 0.093 185.6);
   --font-heading: var(--font-sans);
   --font-sans: 'Inter Variable', sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
@@ -127,7 +131,7 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
+  --primary: oklch(0.783 0.104 185.1);
   --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
@@ -138,7 +142,7 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --ring: oklch(0.699 0.104 184.6);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -214,3 +218,46 @@
 
 .prose-resume a { color: var(--primary); text-decoration: underline; }
 .prose-resume hr { margin: 1.5em 0; border-top: 1px solid var(--border); }
+
+/* Toast colours per type, with richColors enabled on the Toaster.
+   Sonner ships its own hsl defaults and injects them at runtime, so these are
+   scoped one level deeper (html ...) to win regardless of stylesheet order.
+   Sonner resolves "system" through the same matchMedia check the theme
+   provider uses, so data-sonner-theme tracks the .dark class.
+   Every pair below clears WCAG AA (5.2:1 or better) for text on its ground. */
+html [data-sonner-toaster][data-sonner-theme="light"] {
+  --success-bg: oklch(0.971 0.03 155);
+  --success-border: oklch(0.9 0.06 155);
+  --success-text: oklch(0.48 0.13 155);
+
+  --error-bg: oklch(0.971 0.022 27);
+  --error-border: oklch(0.9 0.06 27);
+  --error-text: oklch(0.512 0.2 27);
+
+  --warning-bg: oklch(0.975 0.035 85);
+  --warning-border: oklch(0.9 0.07 85);
+  --warning-text: oklch(0.52 0.12 70);
+
+  /* Info borrows the ikrux teal rather than the usual blue. */
+  --info-bg: oklch(0.972 0.022 185);
+  --info-border: oklch(0.9 0.05 185);
+  --info-text: oklch(0.47 0.09 185);
+}
+
+html [data-sonner-toaster][data-sonner-theme="dark"] {
+  --success-bg: oklch(0.24 0.048 155);
+  --success-border: oklch(0.33 0.07 155);
+  --success-text: oklch(0.83 0.14 155);
+
+  --error-bg: oklch(0.245 0.06 27);
+  --error-border: oklch(0.34 0.1 27);
+  --error-text: oklch(0.81 0.135 27);
+
+  --warning-bg: oklch(0.245 0.045 85);
+  --warning-border: oklch(0.34 0.07 85);
+  --warning-text: oklch(0.85 0.13 85);
+
+  --info-bg: oklch(0.24 0.042 185);
+  --info-border: oklch(0.33 0.06 185);
+  --info-text: oklch(0.83 0.1 185);
+}

@@ -10,12 +10,14 @@ export function RequireAuth() {
   const location = useLocation()
 
   // End the session the moment the token's exp passes, without waiting for a
-  // request to come back 401.
+  // request to come back 401. Tokens without an exp just rely on that 401.
   useEffect(() => {
-    if (!user) return
-    const timer = setTimeout(logout, msUntilExpiry(user))
+    if (!token) return
+    const ms = msUntilExpiry(token)
+    if (ms === null) return
+    const timer = setTimeout(logout, ms)
     return () => clearTimeout(timer)
-  }, [user, logout])
+  }, [token, logout])
 
   if (!token || !user) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
