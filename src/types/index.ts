@@ -42,20 +42,59 @@ export type AuthSession = {
   user: User
 }
 
-/** One resume returned by the search endpoint. `document` is markdown. */
-export type SearchResult = {
-  _id: string
+/**
+ * One profile from either search endpoint. Both strip the resume markdown and
+ * neither carries a candidate name, so the file name is the only label.
+ */
+export type SearchProfile = {
+  id: string
+  fileName: string
   email: string
   phone: string | null
-  file_name: string
-  document: string
-  /** Relevance, 0-1. Optional: present only if the backend returns it. */
-  score?: number
+  /** Vector-search relevance, 0-1. */
+  score: number
+  /**
+   * Presigned PDF link; null when the file is missing from object storage.
+   * Absent when the server issued no link at all.
+   */
+  resumeUrl?: string | null
 }
 
-export type SearchResponse = {
-  results: SearchResult[]
-  total: number
+/**
+ * `POST /search/profiles` -- ranked matches, no LLM. Also opens a conversation
+ * pinned to exactly these results, so follow-up questions answer from them.
+ */
+export type ProfileMatches = {
+  query: string
+  requireResume: boolean
+  /** The limit asked for; `count` can fall short of it. */
+  requested: number
+  count: number
+  /**
+   * How many of `results` the conversation holds: only those with a resume
+   * file. Citations number these, in `results` order.
+   */
+  pinnedForChat: number
+  /**
+   * No expiry: it lives until ended, evicted (least-recently-used, past 20 per
+   * user or 200 overall) or lost to a server restart.
+   */
+  conversationId: string
+  results: SearchProfile[]
+}
+
+/**
+ * `POST /search/ask` -- a written answer. The answer cites profiles as [1],
+ * [2]... in the order of `sources`, which on a follow-up is the pinned set.
+ */
+export type AskAnswer = {
+  conversationId: string
+  /** Questions this conversation has answered, this one included. */
+  turn: number
+  question: string
+  answer: string
+  model: string
+  sources: SearchProfile[]
 }
 
 /**

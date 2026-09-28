@@ -6,7 +6,9 @@ const urls = {
   getUser: (id) => `/users/get/${id}`,
   updateUser: (id) => `/users/update/${id}`,
   deleteUser: (id) => `/users/delete/${id}`,
-  search: '/search',
+  searchProfiles: '/search/profiles',
+  searchAsk: '/search/ask',
+  searchEndConversation: '/search/conversations/end',
   health: '/health',
   healthServices: '/health/services',
 };
