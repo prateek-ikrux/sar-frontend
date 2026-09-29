@@ -58,21 +58,13 @@ export type AuthSession = {
   user: User
 }
 
-/**
- * A reading aid built from the resume text, for triage without opening it.
- * Keyword-based: it shows where the query's words appear, not why the
- * semantic search ranked the profile where it did.
- */
+/** What the server could read from the resume text. */
 export type ProfileSummary = {
   /**
    * The candidate's name as the resume gives it. Null when it isn't clear:
    * the server would rather say nothing than guess.
    */
   name: string | null
-  /** The passage sharing the most words with the query. */
-  snippet: string | null
-  /** Query words the resume contains, spelled as the resume spells them. */
-  terms: string[]
 }
 
 /**
@@ -102,7 +94,7 @@ export type ShortlistItem = {
   fileName: string | null
   email: string | null
   phone: string | null
-  /** Built when it was saved, for the search it was saved from. */
+  /** Built when it was saved. */
   summary: ProfileSummary
   /** The search it was saved from. */
   query: string

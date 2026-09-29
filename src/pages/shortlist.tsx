@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Link } from "react-router"
 import { Bookmark, Download, Search, TriangleAlert, X } from "lucide-react"
 
-import { ContactDetails, Highlighted, ResumeLink, fileLabel } from "@/components/search/result-card"
+import { ContactDetails, ResumeLink, fileLabel } from "@/components/search/result-card"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
 import {
@@ -217,13 +217,7 @@ function ShortlistCard({
         </Button>
       </div>
 
-      {item.summary.snippet && (
-        <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-          <Highlighted text={item.summary.snippet} terms={item.summary.terms} />
-        </p>
-      )}
-
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+      <div className="flex items-center justify-between gap-3">
         <ContactDetails email={item.email} phone={item.phone} />
         {!item.missing && <ResumeLink url={item.resumeUrl} name={name} />}
       </div>

@@ -20,7 +20,7 @@ const draftItem = (profile: SearchProfile, query: string): ShortlistItem => ({
   fileName: profile.fileName,
   email: profile.email,
   phone: profile.phone,
-  summary: profile.summary ?? { name: null, snippet: null, terms: [] },
+  summary: profile.summary ?? { name: null },
   query,
   note: "",
   savedAt: new Date().toISOString(),

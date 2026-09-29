@@ -1,4 +1,4 @@
-import type { ReactNode, Ref } from "react"
+import type { Ref } from "react"
 import { Bookmark, Copy, FileText, FileX, Mail, Phone } from "lucide-react"
 import { toast } from "sonner"
 
@@ -15,30 +15,6 @@ export function fileLabel(fileName: string) {
 /** What to call a candidate: their name from the resume, else the file name. */
 export function candidateName(profile: SearchProfile) {
   return profile.summary?.name ?? fileLabel(profile.fileName)
-}
-
-const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-
-/** Marks each occurrence of the matched query words in the snippet. */
-export function Highlighted({ text, terms }: { text: string; terms: string[] }) {
-  if (!terms.length) return text
-  const pattern = new RegExp(
-    `(?<![a-z0-9])(${terms.map(escapeRegExp).join("|")})(?![a-z0-9])`,
-    "gi"
-  )
-  const parts: ReactNode[] = []
-  let last = 0
-  for (const match of text.matchAll(pattern)) {
-    parts.push(text.slice(last, match.index))
-    parts.push(
-      <mark key={match.index} className="rounded-sm bg-primary/15 px-0.5 text-foreground">
-        {match[0]}
-      </mark>
-    )
-    last = match.index + match[0].length
-  }
-  parts.push(text.slice(last))
-  return parts
 }
 
 async function copy(text: string, what: string) {
@@ -120,27 +96,7 @@ export function ResultCard({ profile, number, rank, highlighted, saved, onToggle
           {onToggleSave && <SaveToggle saved={Boolean(saved)} name={name} onToggle={onToggleSave} />}
         </div>
 
-        {summary?.snippet && (
-          <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-            <Highlighted text={summary.snippet} terms={summary.terms} />
-          </p>
-        )}
-
-        {summary && summary.terms.length > 0 && (
-          <p className="flex flex-wrap items-center gap-1 text-xs">
-            <span className="text-muted-foreground">Mentions</span>
-            {summary.terms.map((term) => (
-              <span
-                key={term}
-                className="rounded-full bg-secondary px-1.5 py-px text-secondary-foreground"
-              >
-                {term}
-              </span>
-            ))}
-          </p>
-        )}
-
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <div className="flex items-center justify-between gap-3">
           <ContactDetails email={profile.email} phone={profile.phone} />
           <ResumeLink url={profile.resumeUrl} name={name} />
         </div>
@@ -166,7 +122,7 @@ export function ResumeLink({ url, name }: { url: string | null | undefined; name
 
   if (url === null) {
     return (
-      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+      <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
         <FileX className="size-3" aria-hidden />
         Resume file missing
       </span>
@@ -177,6 +133,7 @@ export function ResumeLink({ url, name }: { url: string | null | undefined; name
     <Button
       variant="outline"
       size="xs"
+      className="shrink-0"
       nativeButton={false}
       render={
         <a
@@ -193,12 +150,15 @@ export function ResumeLink({ url, name }: { url: string | null | undefined; name
   )
 }
 
-/** Email and phone, each a link with a copy button. */
+/**
+ * Email over phone, each a link with a copy button. Takes the free width of
+ * its row, so whatever sits beside it stays on the right.
+ */
 export function ContactDetails({ email, phone }: { email: string | null; phone: string | null }) {
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+    <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-xs text-muted-foreground">
       {email && (
-        <span className="flex min-w-0 items-center gap-0.5">
+        <span className="flex max-w-full min-w-0 items-center gap-0.5">
           <a
             href={`mailto:${email}`}
             className="flex min-w-0 items-center gap-1 rounded-sm hover:text-foreground hover:underline"
