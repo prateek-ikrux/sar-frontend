@@ -19,6 +19,22 @@ export type User = {
   last_login_at: string | null
 }
 
+/** `POST /users/create`: the new user, and whether the welcome email went out. */
+export type CreatedUser = User & { invited: boolean }
+
+export type UserSort = "name" | "email" | "role" | "created_at" | "last_login_at"
+
+export type UserListParams = {
+  page?: number
+  limit?: number
+  /** Matched against name and email. */
+  q?: string
+  role?: Role
+  status?: "active" | "disabled"
+  sort?: UserSort
+  order?: "asc" | "desc"
+}
+
 /** One page of `GET /users`. The server defaults to 20 per page. */
 export type UserPage = {
   users: User[]
@@ -43,8 +59,26 @@ export type AuthSession = {
 }
 
 /**
+ * A reading aid built from the resume text, for triage without opening it.
+ * Keyword-based: it shows where the query's words appear, not why the
+ * semantic search ranked the profile where it did.
+ */
+export type ProfileSummary = {
+  /**
+   * The candidate's name as the resume gives it. Null when it isn't clear:
+   * the server would rather say nothing than guess.
+   */
+  name: string | null
+  /** The passage sharing the most words with the query. */
+  snippet: string | null
+  /** Query words the resume contains, spelled as the resume spells them. */
+  terms: string[]
+}
+
+/**
  * One profile from either search endpoint. Both strip the resume markdown and
- * neither carries a candidate name, so the file name is the only label.
+ * neither carries a structured name, so `summary.name` (or failing that the
+ * file name) is the label.
  */
 export type SearchProfile = {
   id: string
@@ -53,11 +87,31 @@ export type SearchProfile = {
   phone: string | null
   /** Vector-search relevance, 0-1. */
   score: number
+  /** Absent from servers older than the summary feature. */
+  summary?: ProfileSummary
   /**
    * Presigned PDF link; null when the file is missing from object storage.
    * Absent when the server issued no link at all.
    */
   resumeUrl?: string | null
+}
+
+/** A candidate on the signed-in user's shortlist. Only they can see it. */
+export type ShortlistItem = {
+  profileId: string
+  fileName: string | null
+  email: string | null
+  phone: string | null
+  /** Built when it was saved, for the search it was saved from. */
+  summary: ProfileSummary
+  /** The search it was saved from. */
+  query: string
+  note: string
+  savedAt: string
+  /** Signed fresh on every load; null when the file is missing. */
+  resumeUrl: string | null
+  /** The profile has left the library; details are as saved. */
+  missing: boolean
 }
 
 /**
@@ -98,11 +152,15 @@ export type AskAnswer = {
 }
 
 /**
- * The few JWT claims the client reads. The server's token carries `_id`; `exp`
- * is only there when ACCESS_TOKEN_EXPIRY is set, so treat it as optional.
+ * The JWT's claims. The server signs `_id`, `email` and `role`; the client
+ * only reads `exp`, to end the session on time. Role checks use the stored
+ * user instead. `exp` is only there when ACCESS_TOKEN_EXPIRY is set, so treat
+ * it as optional.
  */
 export type TokenClaims = {
   _id?: string
+  email?: string
+  role?: Role
   exp?: number
   iat?: number
 }

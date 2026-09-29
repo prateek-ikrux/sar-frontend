@@ -1,8 +1,7 @@
-import type { Ref } from "react"
-import { Lock, Search, Sparkles } from "lucide-react"
+import { useState, type Ref } from "react"
+import { Lock, RotateCcw, Search, Sparkles } from "lucide-react"
 
 import { Hint } from "@/components/search/hint"
-import { Button } from "@/components/ui/button"
 import {
   InputGroup,
   InputGroupAddon,
@@ -19,10 +18,12 @@ import {
 } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
 import { Switch } from "@/components/ui/switch"
+import {
+  READING_DEPTHS,
+  RESULT_COUNTS,
+  fitOptions,
+} from "@/lib/search-options"
 import { MIN_QUERY_LENGTH, type SearchOptions } from "@/services/search"
-
-const LIMITS = [3, 5, 10, 15, 20, 40]
-const DEPTHS = [2000, 4000, 8000, 12000, 20000]
 
 type Props = {
   value: string
@@ -36,13 +37,13 @@ type Props = {
   isPending: boolean
   options: SearchOptions
   onOptionsChange: (options: SearchOptions) => void
-  /** A conversation is open, so size and depth are fixed until a new search. */
+  /** Questions have been asked, so the settings are fixed until a new search. */
   locked: boolean
+  /** There are results on screen that "New search" would clear. */
+  hasResults: boolean
   onNewSearch: () => void
   inputRef?: Ref<HTMLTextAreaElement>
 }
-
-const LOCKED_HINT = "Start a new search to change this."
 
 /**
  * Controlled so the page can drop an example straight into the box. Both
@@ -57,12 +58,21 @@ export function SearchBar({
   options,
   onOptionsChange,
   locked,
+  hasResults,
   onNewSearch,
   inputRef,
 }: Props) {
+  const [note, setNote] = useState<string | null>(null)
   const trimmed = value.trim()
   const tooShort = trimmed.length > 0 && trimmed.length < MIN_QUERY_LENGTH
   const canSubmit = trimmed.length >= MIN_QUERY_LENGTH && !isPending
+
+  function change(next: SearchOptions, changed: "limit" | "charsPerDocument" | "requireResume") {
+    const fitted =
+      changed === "requireResume" ? { options: next, note: null } : fitOptions(next, changed)
+    setNote(fitted.note)
+    onOptionsChange(fitted.options)
+  }
 
   return (
     <form
@@ -81,7 +91,8 @@ export function SearchBar({
           maxLength={1000}
           aria-label="Describe the candidate you need"
           aria-invalid={tooShort || undefined}
-          placeholder="Senior React engineer, 5+ years, fintech background, based in Bangalore..."
+          aria-describedby="search-hint"
+          placeholder="Senior React engineer, 5+ years, fintech background, based in Bangalore"
           className="min-h-10"
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) {
@@ -90,19 +101,25 @@ export function SearchBar({
             }
           }}
         />
-        <InputGroupAddon align="block-end" className="justify-between">
-          <span className="text-xs text-muted-foreground">
+        <InputGroupAddon align="block-end" className="flex-wrap justify-between gap-y-1">
+          <span id="search-hint" className="text-xs font-normal text-muted-foreground">
             {tooShort ? (
               <span className="text-destructive">
-                At least {MIN_QUERY_LENGTH} characters
+                Type at least {MIN_QUERY_LENGTH} characters
               </span>
             ) : (
-              "Enter to search, Shift+Enter for a new line"
+              <span className="max-sm:hidden">Enter to search, Shift+Enter for a new line</span>
             )}
           </span>
-          <span className="flex items-center gap-1">
+          <span className="ml-auto flex items-center gap-1">
+            {hasResults && (
+              <InputGroupButton size="sm" onClick={onNewSearch}>
+                <RotateCcw />
+                New search
+              </InputGroupButton>
+            )}
             {onAsk && (
-              <Hint label="Ask this as a question: the answer comes with the profiles it drew on">
+              <Hint label="Get a written answer, with the candidates it's based on">
                 <InputGroupButton
                   size="sm"
                   disabled={!canSubmit}
@@ -126,61 +143,49 @@ export function SearchBar({
           id="search-limit"
           label="Results"
           value={options.limit}
-          choices={LIMITS}
-          format={(n) => String(n)}
+          choices={RESULT_COUNTS.map((n) => ({ value: n, label: String(n) }))}
           disabled={locked}
-          onChange={(limit) => onOptionsChange({ ...options, limit })}
+          onChange={(limit) => change({ ...options, limit }, "limit")}
         />
         <OptionSelect
           id="search-depth"
-          label="Depth"
+          label="Reading"
           value={options.charsPerDocument}
-          choices={DEPTHS}
-          format={(n) => `${n.toLocaleString()} chars`}
+          choices={READING_DEPTHS.map((d) => ({
+            value: d.value,
+            label: d.label,
+            description: d.description,
+          }))}
           disabled={locked}
-          onChange={(charsPerDocument) =>
-            onOptionsChange({ ...options, charsPerDocument })
-          }
+          onChange={(charsPerDocument) => change({ ...options, charsPerDocument }, "charsPerDocument")}
         />
-        <Hint
-          label={
-            locked
-              ? LOCKED_HINT
-              : "Skip candidates whose resume PDF is missing, and fill the results with ones that have it"
-          }
-        >
-          <span className="flex items-center gap-1.5">
-            <Switch
-              id="search-require-resume"
-              size="sm"
-              checked={options.requireResume}
-              disabled={locked}
-              onCheckedChange={(requireResume) =>
-                onOptionsChange({ ...options, requireResume })
-              }
-            />
-            <Label
-              htmlFor="search-require-resume"
-              className="text-xs font-normal text-muted-foreground"
-            >
-              Only with resume
-            </Label>
-          </span>
-        </Hint>
-        {locked && (
+        <span className="flex items-center gap-1.5">
+          <Switch
+            id="search-require-resume"
+            size="sm"
+            checked={options.requireResume}
+            disabled={locked}
+            onCheckedChange={(requireResume) => change({ ...options, requireResume }, "requireResume")}
+          />
+          <Label
+            htmlFor="search-require-resume"
+            className="text-xs font-normal text-muted-foreground"
+          >
+            Only candidates with a resume file
+          </Label>
+        </span>
+
+        {locked ? (
           <span className="flex items-center gap-1">
             <Lock className="size-3" aria-hidden />
-            Fixed for this chat ·
-            <Button
-              type="button"
-              variant="link"
-              size="xs"
-              className="h-auto px-0"
-              onClick={onNewSearch}
-            >
-              New search
-            </Button>
+            Settings are fixed once you ask a question. Start a new search to change them.
           </span>
+        ) : (
+          note && (
+            <span role="status" className="text-foreground">
+              {note}
+            </span>
+          )
         )}
       </div>
     </form>
@@ -192,48 +197,47 @@ function OptionSelect({
   label,
   value,
   choices,
-  format,
   disabled,
   onChange,
 }: {
   id: string
   label: string
   value: number
-  choices: number[]
-  format: (n: number) => string
+  choices: { value: number; label: string; description?: string }[]
   disabled: boolean
   onChange: (value: number) => void
 }) {
   return (
-    // Disabled controls swallow pointer events, so the hint sits on a wrapper.
-    <Hint label={disabled ? LOCKED_HINT : undefined}>
-      <span className="flex items-center gap-1.5">
-        <Label
-          htmlFor={id}
-          className="text-xs font-normal text-muted-foreground"
-        >
-          {label}
-        </Label>
-        <Select
-          value={value}
-          disabled={disabled}
-          items={choices.map((n) => ({ value: n, label: format(n) }))}
-          onValueChange={(next) => {
-            if (next !== null) onChange(next)
-          }}
-        >
-          <SelectTrigger id={id} size="sm" className="h-7 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent alignItemWithTrigger={false} align="start">
-            {choices.map((n) => (
-              <SelectItem key={n} value={n} className="text-xs">
-                {format(n)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </span>
-    </Hint>
+    <span className="flex items-center gap-1.5">
+      <Label htmlFor={id} className="text-xs font-normal text-muted-foreground">
+        {label}
+      </Label>
+      <Select
+        value={value}
+        disabled={disabled}
+        items={choices.map(({ value, label }) => ({ value, label }))}
+        onValueChange={(next) => {
+          if (next !== null) onChange(next)
+        }}
+      >
+        <SelectTrigger id={id} size="sm" className="h-7 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent alignItemWithTrigger={false} align="start">
+          {choices.map((choice) => (
+            <SelectItem key={choice.value} value={choice.value} className="text-xs">
+              {choice.description ? (
+                <span className="flex flex-col">
+                  <span>{choice.label}</span>
+                  <span className="text-muted-foreground">{choice.description}</span>
+                </span>
+              ) : (
+                choice.label
+              )}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </span>
   )
 }

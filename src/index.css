@@ -39,7 +39,9 @@
 
   --muted: oklch(0.97 0 0);
 
-  --muted-foreground: oklch(0.556 0 0);
+  /* Dark enough to stay above 4.5:1 on the tinted grounds it sits on
+     (muted chat bubbles, primary/5 notices), not just on white. */
+  --muted-foreground: oklch(0.48 0 0);
 
   --accent-foreground: oklch(0.205 0 0);
 
@@ -48,54 +50,12 @@
   --input: oklch(0.922 0 0);
 
   --ring: oklch(0.597 0.093 185.6);
-
-  --chart-1: oklch(0.87 0 0);
-
-  --chart-2: oklch(0.556 0 0);
-
-  --chart-3: oklch(0.439 0 0);
-
-  --chart-4: oklch(0.371 0 0);
-
-  --chart-5: oklch(0.269 0 0);
-
   --radius: 0.625rem;
-
-  --sidebar: oklch(0.985 0 0);
-
-  --sidebar-foreground: oklch(0.145 0 0);
-
-  --sidebar-primary: oklch(0.205 0 0);
-
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-
-  --sidebar-accent: oklch(0.97 0 0);
-
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-
-  --sidebar-border: oklch(0.922 0 0);
-
-  --sidebar-ring: oklch(0.708 0 0)
 }
 
 @theme inline {
-  /* The teal straight off the wordmark, for accents that are not --primary. */
-  --color-brand: oklch(0.597 0.093 185.6);
   --font-heading: var(--font-sans);
   --font-sans: 'Inter Variable', sans-serif;
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -143,81 +103,74 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.699 0.104 184.6);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;}
+    @apply border-border outline-ring/50;
+  }
   body {
-    @apply bg-background text-foreground;}
+    @apply bg-background text-foreground;
+  }
   html {
-    @apply font-sans;}}
-/* Resumes arrive as one markdown blob, so the detail view needs real typography. */
-.prose-resume {
+    @apply font-sans;
+  }
+}
+
+/* Chat answers arrive as markdown, so they need real typography. */
+.prose-answer {
   font-size: 0.875rem;
   line-height: 1.6;
   color: var(--foreground);
 }
 
-.prose-resume h1,
-.prose-resume h2,
-.prose-resume h3 {
+.prose-answer h1,
+.prose-answer h2,
+.prose-answer h3 {
   margin: 1.5em 0 0.5em;
   font-weight: 600;
   line-height: 1.3;
 }
 
-.prose-resume h1 { font-size: 1.125rem; }
-.prose-resume h2 { font-size: 1rem; }
-.prose-resume h3 { font-size: 0.9375rem; }
-.prose-resume > :first-child { margin-top: 0; }
+.prose-answer h1 { font-size: 1.125rem; }
+.prose-answer h2 { font-size: 1rem; }
+.prose-answer h3 { font-size: 0.9375rem; }
+.prose-answer > :first-child { margin-top: 0; }
+.prose-answer > :last-child { margin-bottom: 0; }
 
-.prose-resume p,
-.prose-resume ul,
-.prose-resume ol {
+.prose-answer p,
+.prose-answer ul,
+.prose-answer ol {
   margin: 0.75em 0;
 }
 
-.prose-resume ul { list-style: disc; padding-left: 1.25rem; }
-.prose-resume ol { list-style: decimal; padding-left: 1.25rem; }
-.prose-resume li { margin: 0.25em 0; }
-.prose-resume strong { font-weight: 600; }
+.prose-answer ul { list-style: disc; padding-left: 1.25rem; }
+.prose-answer ol { list-style: decimal; padding-left: 1.25rem; }
+.prose-answer li { margin: 0.25em 0; }
+.prose-answer strong { font-weight: 600; }
 
-.prose-resume table {
+.prose-answer table {
   width: 100%;
   margin: 1em 0;
   border-collapse: collapse;
   font-size: 0.8125rem;
 }
 
-.prose-resume th,
-.prose-resume td {
+.prose-answer th,
+.prose-answer td {
   border: 1px solid var(--border);
   padding: 0.375rem 0.625rem;
   text-align: left;
   vertical-align: top;
 }
 
-.prose-resume th {
+.prose-answer th {
   background: var(--muted);
   font-weight: 600;
 }
 
-.prose-resume a { color: var(--primary); text-decoration: underline; }
-.prose-resume hr { margin: 1.5em 0; border-top: 1px solid var(--border); }
+.prose-answer a { color: var(--primary); text-decoration: underline; }
+.prose-answer hr { margin: 1.5em 0; border-top: 1px solid var(--border); }
 
 /* Toast colours per type, with richColors enabled on the Toaster.
    Sonner ships its own hsl defaults and injects them at runtime, so these are
@@ -260,4 +213,17 @@ html [data-sonner-toaster][data-sonner-theme="dark"] {
   --info-bg: oklch(0.24 0.042 185);
   --info-border: oklch(0.33 0.06 185);
   --info-text: oklch(0.83 0.1 185);
+}
+
+/* Motion is decoration here, never information: turn it off for people who
+   ask their OS for less. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

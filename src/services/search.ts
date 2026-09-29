@@ -1,10 +1,23 @@
 import urls from "@/constants/urls"
-import { api, unwrap } from "@/lib/api"
+import { api, endSessionOn401, isAbort, toApiError, unwrap } from "@/lib/api"
 import { useAuthStore } from "@/stores/auth-store"
-import type { ApiEnvelope, AskAnswer, ProfileMatches } from "@/types"
+import type { ApiEnvelope, AskAnswer, ProfileMatches, SearchProfile } from "@/types"
 
 /** The server rejects anything shorter. */
 export const MIN_QUERY_LENGTH = 3
+
+/**
+ * Mirrors the server's MAX_CONTEXT_CHARS: limit x charsPerDocument above this
+ * is a 422, since it is how much resume text every answer re-reads.
+ */
+export const MAX_CONTEXT_CHARS = 200_000
+
+/**
+ * Gives up on a stream that has gone quiet for this long. The server sends a
+ * heartbeat every 15 seconds and bounds its model call at about 2 minutes, so
+ * silence past this means the connection, not the model, is stuck.
+ */
+const STREAM_IDLE_TIMEOUT_MS = 60_000
 
 /**
  * What a conversation is pinned to. Sent when a set is created, and never
@@ -13,7 +26,10 @@ export const MIN_QUERY_LENGTH = 3
 export type SearchOptions = {
   /** 1-40. */
   limit: number
-  /** How much of each resume the model reads, 500-20000. */
+  /**
+   * How much of each resume the model reads, 500-20000. Its product with
+   * `limit` is capped at MAX_CONTEXT_CHARS.
+   */
   charsPerDocument: number
   /**
    * Skip profiles whose PDF is missing and keep scanning until `limit` are
@@ -40,24 +56,127 @@ export async function searchProfiles(
   )
 }
 
+export type AskTarget = { conversationId: string } | { options: SearchOptions }
+
+export type StreamHandlers = {
+  /** The set is known: sent before the first word, so it can be shown early. */
+  onMeta?: (meta: { conversationId: string; sources: SearchProfile[] }) => void
+  onToken?: (text: string) => void
+}
+
+function parseEvent(block: string): { event: string; data: unknown } | null {
+  let event = ""
+  let data = ""
+  for (const line of block.split("\n")) {
+    if (line.startsWith("event:")) event = line.slice(6).trim()
+    else if (line.startsWith("data:")) data += line.slice(5).trim()
+  }
+  // A heartbeat is a bare comment line, with neither.
+  return event ? { event, data: data ? JSON.parse(data) : null } : null
+}
+
 /**
- * A written answer over a pinned set of resumes. Without a conversationId the
- * server retrieves and pins in the same call. With one, `options` must be left
- * out: the set is fixed, and the server answers 422 if you try to change it.
+ * A written answer over a pinned set of resumes, streamed as it is written.
+ * Without a conversationId the server retrieves and pins in the same call,
+ * and `onMeta` hands over that set before the answer starts. Aborting
+ * `signal` stops the model; the server then records nothing for this turn.
  */
-export async function askProfiles(
+export async function streamAsk(
   question: string,
-  target: { conversationId: string } | { options: SearchOptions },
+  target: AskTarget,
+  handlers: StreamHandlers = {},
   signal?: AbortSignal
 ): Promise<AskAnswer> {
+  const token = useAuthStore.getState().token
   const body =
     "conversationId" in target
       ? { question, conversationId: target.conversationId }
       : { question, ...target.options }
 
-  return unwrap(
-    await api.post<ApiEnvelope<AskAnswer>>(urls.searchAsk, body, { signal })
-  )
+  // One controller for both the caller's Stop and the idle timeout.
+  const controller = new AbortController()
+  const stopWith = () => controller.abort(signal?.reason)
+  signal?.addEventListener("abort", stopWith, { once: true })
+  let timedOut = false
+  let idle: ReturnType<typeof setTimeout> | undefined
+  const armIdle = () => {
+    clearTimeout(idle)
+    idle = setTimeout(() => {
+      timedOut = true
+      controller.abort()
+    }, STREAM_IDLE_TIMEOUT_MS)
+  }
+
+  try {
+    armIdle()
+    let response: Response
+    try {
+      response = await fetch(`${api.defaults.baseURL}${urls.searchAskStream}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      })
+    } catch (error) {
+      if (timedOut) throw toApiError({ timedOut: true })
+      if (isAbort(error)) throw error
+      throw toApiError({})
+    }
+
+    if (!response.ok || !response.body) {
+      const errorBody = await response.json().catch(() => null)
+      endSessionOn401(response.status, Boolean(token))
+      throw toApiError({ status: response.status, body: errorBody, url: urls.searchAskStream })
+    }
+
+    const reader = response.body.pipeThrough(new TextDecoderStream()).getReader()
+    let buffer = ""
+    let answer: AskAnswer | null = null
+
+    try {
+      for (;;) {
+        const { value, done } = await reader.read()
+        if (done) break
+        armIdle()
+        buffer += value
+
+        let boundary: number
+        while ((boundary = buffer.indexOf("\n\n")) >= 0) {
+          const parsed = parseEvent(buffer.slice(0, boundary))
+          buffer = buffer.slice(boundary + 2)
+          if (!parsed) continue
+
+          if (parsed.event === "meta") {
+            handlers.onMeta?.(parsed.data as { conversationId: string; sources: SearchProfile[] })
+          } else if (parsed.event === "token") {
+            handlers.onToken?.((parsed.data as { text: string }).text)
+          } else if (parsed.event === "done") {
+            answer = parsed.data as AskAnswer
+          } else if (parsed.event === "error") {
+            const data = parsed.data as { statusCode?: number; message?: string; errors?: string[] }
+            throw toApiError({ status: data.statusCode ?? 500, body: data, url: urls.searchAskStream })
+          }
+        }
+      }
+    } catch (error) {
+      if (timedOut) throw toApiError({ timedOut: true })
+      if (isAbort(error) || controller.signal.aborted) {
+        throw new DOMException("Stopped", "AbortError")
+      }
+      throw error
+    }
+
+    // The connection closed without a verdict: a proxy or the server died.
+    if (!answer) throw toApiError({ status: 502 })
+    return answer
+  } finally {
+    clearTimeout(idle)
+    signal?.removeEventListener("abort", stopWith)
+  }
 }
 
 /**
