@@ -24,8 +24,8 @@ reports/
 # =========================================
 # Environment and config files (sensitive)
 # =========================================
+# API URL is passed as a build arg / env_file, never copied into the image
 *.env*
-!.env.production  # Allow production env file if needed
 *.log
  
 # =========================================
@@ -56,7 +56,10 @@ Thumbs.db
 # Docker-related files
 # =========================================
 Dockerfile
+Dockerfile.dev
 .dockerignore
+compose.yaml
+compose.override.yaml
 docker-compose.yml
 docker-compose.override.yml
  
