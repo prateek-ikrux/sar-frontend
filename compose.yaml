@@ -1,6 +1,6 @@
 # Usage:
 #   Dev  (hot reload): docker compose up --watch dev
-#   Prod (static build): docker compose up --build prod
+#   Prod (static build): docker compose up --build -d prod
 # Profiles keep a bare `docker compose up` from starting both at once.
 
 services:
@@ -10,11 +10,22 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        # Baked into the bundle at build time; read from .env or the shell
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000/api/v1}
+        # Baked into the bundle at build time; read from .env or the shell.
+        # Defaults to same-origin /api/v1, which nginx proxies to the backend
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
+    init: true
     ports:
-      - "3000:3000"
+      # Loopback only: Docker's published ports bypass ufw, and nginx on the
+      # host is the only thing that should reach this
+      - "127.0.0.1:3000:3000"
     restart: unless-stopped
+    # Docker's default json-file driver never rotates, so logs would grow until
+    # the disk fills; keep at most 3 x 10 MB per container
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 
   dev:

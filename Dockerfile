@@ -57,5 +57,10 @@ USER node
 EXPOSE 3000
 
 
+# Liveness probe: serve answers / with index.html once it is listening
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO /dev/null "http://127.0.0.1:3000/" || exit 1
+
+
 # Run `serve` directly to serve the built app (-s: fall back to index.html for client-side routes)
 CMD ["./node_modules/.bin/serve", "-s", "dist", "-l", "3000"]
