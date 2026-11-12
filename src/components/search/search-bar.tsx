@@ -67,9 +67,11 @@ export function SearchBar({
   const tooShort = trimmed.length > 0 && trimmed.length < MIN_QUERY_LENGTH
   const canSubmit = trimmed.length >= MIN_QUERY_LENGTH && !isPending
 
-  function change(next: SearchOptions, changed: "limit" | "charsPerDocument" | "requireResume") {
+  function change(next: SearchOptions, changed: keyof SearchOptions) {
     const fitted =
-      changed === "requireResume" ? { options: next, note: null } : fitOptions(next, changed)
+      changed === "limit" || changed === "charsPerDocument"
+        ? fitOptions(next, changed)
+        : { options: next, note: null }
     setNote(fitted.note)
     onOptionsChange(fitted.options)
   }
@@ -159,21 +161,29 @@ export function SearchBar({
           disabled={locked}
           onChange={(charsPerDocument) => change({ ...options, charsPerDocument }, "charsPerDocument")}
         />
-        <span className="flex items-center gap-1.5">
-          <Switch
-            id="search-require-resume"
-            size="sm"
-            checked={options.requireResume}
-            disabled={locked}
-            onCheckedChange={(requireResume) => change({ ...options, requireResume }, "requireResume")}
-          />
-          <Label
-            htmlFor="search-require-resume"
-            className="text-xs font-normal text-muted-foreground"
-          >
-            Only candidates with a resume file
-          </Label>
-        </span>
+        <OptionSwitch
+          id="search-require-resume"
+          label="Only candidates with a resume file"
+          checked={options.requireResume}
+          disabled={locked}
+          onChange={(requireResume) => change({ ...options, requireResume }, "requireResume")}
+        />
+        <OptionSwitch
+          id="search-hide-mine"
+          label="Hide ones I've worked on"
+          hint="Leaves out candidates you've opened, contacted, saved, tagged or exported in the last 90 days"
+          checked={options.hideMine}
+          disabled={locked}
+          onChange={(hideMine) => change({ ...options, hideMine }, "hideMine")}
+        />
+        <OptionSwitch
+          id="search-hide-team"
+          label="Hide ones my team is working on"
+          hint="Leaves out candidates other recruiters have opened, contacted, saved, tagged or exported in the last 90 days"
+          checked={options.hideTeam}
+          disabled={locked}
+          onChange={(hideTeam) => change({ ...options, hideTeam }, "hideTeam")}
+        />
 
         {locked ? (
           <span className="flex items-center gap-1">
@@ -190,6 +200,32 @@ export function SearchBar({
       </div>
     </form>
   )
+}
+
+function OptionSwitch({
+  id,
+  label,
+  hint,
+  checked,
+  disabled,
+  onChange,
+}: {
+  id: string
+  label: string
+  hint?: string
+  checked: boolean
+  disabled: boolean
+  onChange: (checked: boolean) => void
+}) {
+  const control = (
+    <span className="flex items-center gap-1.5">
+      <Switch id={id} size="sm" checked={checked} disabled={disabled} onCheckedChange={onChange} />
+      <Label htmlFor={id} className="text-xs font-normal text-muted-foreground">
+        {label}
+      </Label>
+    </span>
+  )
+  return hint ? <Hint label={hint}>{control}</Hint> : control
 }
 
 function OptionSelect({

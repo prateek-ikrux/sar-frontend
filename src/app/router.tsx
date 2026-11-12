@@ -50,6 +50,14 @@ export const router = createBrowserRouter([
                         path: "users",
                         lazy: lazyPage(() => import("@/pages/users")),
                       },
+                      {
+                        path: "team",
+                        lazy: lazyPage(() => import("@/pages/team")),
+                      },
+                      {
+                        path: "users/:id",
+                        lazy: lazyPage(() => import("@/pages/user-activity")),
+                      },
                     ],
                   },
                   {

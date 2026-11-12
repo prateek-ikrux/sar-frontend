@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react"
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router"
-import { Bookmark, LogOut, Monitor, Moon, Search, Sun, Users } from "lucide-react"
+import { Activity, Bookmark, LogOut, Monitor, Moon, Search, Sun, Users } from "lucide-react"
 
 import { Lockup } from "@/components/brand/wordmark"
 import { useTheme, type Theme } from "@/components/theme-provider"
@@ -16,6 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useActivityHeartbeat } from "@/hooks/use-activity-heartbeat"
 import { useShortlist } from "@/hooks/use-shortlist"
 import { useAuthStore } from "@/stores/auth-store"
 import { cn } from "@/lib/utils"
@@ -35,6 +36,7 @@ export function RootLayout() {
   const saved = useShortlist().items.length
   const main = useRef<HTMLElement>(null)
   const lastPath = useRef(pathname)
+  useActivityHeartbeat()
 
   // After an in-app navigation, move focus to the new page so screen readers
   // start reading there, as they would on a full page load. Compared with the
@@ -49,7 +51,10 @@ export function RootLayout() {
     { to: "/search", label: "Search", icon: Search, count: 0 },
     { to: "/shortlist", label: "Shortlist", icon: Bookmark, count: saved },
     ...(user?.role === "admin"
-      ? [{ to: "/users", label: "Users", icon: Users, count: 0 }]
+      ? [
+          { to: "/team", label: "Team", icon: Activity, count: 0 },
+          { to: "/users", label: "Users", icon: Users, count: 0 },
+        ]
       : []),
   ]
 

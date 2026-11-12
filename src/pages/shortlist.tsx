@@ -21,6 +21,7 @@ import { useShortlist } from "@/hooks/use-shortlist"
 import { downloadCsv } from "@/lib/csv"
 import { DEFAULT_OPTIONS, searchParamsFor } from "@/lib/search-options"
 import type { ApiError } from "@/lib/api"
+import { exportContacts } from "@/services/candidates"
 import type { ShortlistItem } from "@/types"
 
 const NOTE_MAX = 1000
@@ -44,7 +45,15 @@ export default function ShortlistPage() {
       )
     : shortlist.items
 
+  // The contacts are already on screen; the server is told, since a
+  // spreadsheet takes them off the platform. A failure to record it doesn't
+  // stop the download.
   function exportCsv() {
+    if (shown.length) {
+      exportContacts({ profileIds: shown.map((item) => item.profileId), source: "shortlist" }).catch(
+        () => {}
+      )
+    }
     downloadCsv("shortlist.csv", [
       ["Candidate", "Resume file", "Email", "Phone", "Saved from search", "Saved on", "Note", "Resume link (expires within 24 hours)"],
       ...shown.map((item) => [
@@ -219,7 +228,7 @@ function ShortlistCard({
 
       <div className="flex items-center justify-between gap-3">
         <ContactDetails email={item.email} phone={item.phone} />
-        {!item.missing && <ResumeLink url={item.resumeUrl} name={name} />}
+        {!item.missing && <ResumeLink url={item.resumeUrl} name={name} profileId={item.profileId} />}
       </div>
 
       <NoteEditor profileId={item.profileId} note={item.note} name={name} onSave={onSaveNote} />

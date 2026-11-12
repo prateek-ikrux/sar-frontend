@@ -4,6 +4,8 @@ export const DEFAULT_OPTIONS: SearchOptions = {
   limit: 5,
   charsPerDocument: 4000,
   requireResume: true,
+  hideMine: false,
+  hideTeam: false,
 }
 
 export const RESULT_COUNTS = [3, 5, 10, 15, 20, 40]
@@ -66,6 +68,8 @@ export function searchParamsFor(query: string, options: SearchOptions) {
   if (options.requireResume !== DEFAULT_OPTIONS.requireResume) {
     params.set("resume", options.requireResume ? "1" : "0")
   }
+  if (options.hideMine) params.set("hide-mine", "1")
+  if (options.hideTeam) params.set("hide-team", "1")
   return params
 }
 
@@ -80,6 +84,8 @@ export function optionsFromParams(params: URLSearchParams): SearchOptions {
       ? chars
       : DEFAULT_OPTIONS.charsPerDocument,
     requireResume: resume === null ? DEFAULT_OPTIONS.requireResume : resume === "1",
+    hideMine: params.get("hide-mine") === "1",
+    hideTeam: params.get("hide-team") === "1",
   }
   return fitOptions(options, "limit").options
 }

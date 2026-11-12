@@ -14,6 +14,12 @@ type AuthState = {
   token: string | null
   user: User | null
   endedBecause: SessionEnd | null
+  /**
+   * Whose session last ended. Sign-in only returns to the page that was open
+   * (search included) when the same person signs back in after an expiry;
+   * anyone else starts fresh.
+   */
+  endedUserId: string | null
   setSession: (session: AuthSession) => void
   /** Replaces the stored user with a fresher copy from the server. */
   setUser: (user: User) => void
@@ -32,6 +38,7 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       user: null,
       endedBecause: null,
+      endedUserId: null,
       setSession: ({ accessToken, user }) =>
         set({ token: accessToken, user, endedBecause: null }),
       setUser: (user) => set((state) => (state.token ? { user } : state)),
@@ -40,7 +47,7 @@ export const useAuthStore = create<AuthState>()(
           // Only the first reason counts: an expiry followed by the 401s of
           // requests already in flight is still an expiry.
           state.token
-            ? { token: null, user: null, endedBecause: reason }
+            ? { token: null, user: null, endedBecause: reason, endedUserId: state.user?._id ?? null }
             : state
         ),
     }),
@@ -55,7 +62,7 @@ export const useAuthStore = create<AuthState>()(
           return { ...current, token: null, user: null }
         }
         if (isExpired(token)) {
-          return { ...current, token: null, user: null, endedBecause: "expired" }
+          return { ...current, token: null, user: null, endedBecause: "expired", endedUserId: user._id }
         }
         return { ...current, token, user }
       },

@@ -36,6 +36,10 @@ export type SearchOptions = {
    * found. When false those profiles are listed, but never pinned for chat.
    */
   requireResume: boolean
+  /** Leave out candidates you've worked on in the last 90 days. */
+  hideMine: boolean
+  /** Leave out candidates other recruiters have worked on in the last 90 days. */
+  hideTeam: boolean
 }
 
 /**

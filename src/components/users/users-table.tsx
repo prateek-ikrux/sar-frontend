@@ -1,6 +1,8 @@
 import { useState } from "react"
+import { Link, useNavigate } from "react-router"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import {
+  Activity,
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
@@ -46,8 +48,33 @@ import {
 import { deleteUser, updateUser, type UserPatch } from "@/services/users"
 import { useAuthStore } from "@/stores/auth-store"
 import type { ApiError } from "@/lib/api"
+import { timeAgo } from "@/lib/team"
+import { formatDuration } from "@/lib/usage"
 import { cn } from "@/lib/utils"
-import type { User, UserSort } from "@/types"
+import type { User, UserSort, UserUsage } from "@/types"
+
+/** Last week's searches, resumes and contacts, and when they were last active. */
+function UsageCell({ usage }: { usage: UserUsage | undefined }) {
+  if (!usage) return <span className="text-muted-foreground">&ndash;</span>
+  const quiet = usage.searches + usage.resumes + usage.contacts === 0 && usage.activeSeconds === 0
+  return (
+    <div className="space-y-0.5 text-sm">
+      {quiet ? (
+        <p className="text-muted-foreground">No activity</p>
+      ) : (
+        <p className="text-foreground tabular-nums">
+          {usage.searches} {usage.searches === 1 ? "search" : "searches"} · {usage.resumes}{" "}
+          {usage.resumes === 1 ? "resume" : "resumes"} · {usage.contacts}{" "}
+          {usage.contacts === 1 ? "contact" : "contacts"}
+        </p>
+      )}
+      <p className="text-xs text-muted-foreground">
+        {usage.activeSeconds > 0 && <>{formatDuration(usage.activeSeconds)} on the platform · </>}
+        {usage.lastActiveAt ? `active ${timeAgo(usage.lastActiveAt)}` : "never active"}
+      </p>
+    </div>
+  )
+}
 
 export type SortState = { by: UserSort; order: "asc" | "desc" }
 
@@ -106,6 +133,7 @@ export function UsersTable({
   busy: boolean
 }) {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const me = useAuthStore((s) => s.user)
   const [pending, setPending] = useState<Pending>(null)
   const [renaming, setRenaming] = useState<User | null>(null)
@@ -208,6 +236,7 @@ export function UsersTable({
               <TableHead>Status</TableHead>
               {sortable("created_at", "Added", "max-md:hidden")}
               {sortable("last_login_at", "Last sign-in", "max-sm:hidden")}
+              <TableHead className="max-lg:hidden">Last 7 days</TableHead>
               <TableHead className="w-12">
                 <span className="sr-only">Actions</span>
               </TableHead>
@@ -221,9 +250,12 @@ export function UsersTable({
                   <TableCell>
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground">
+                        <Link
+                          to={`/users/${user._id}`}
+                          className="rounded-sm font-medium text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+                        >
                           {user.name ?? user.email}
-                        </span>
+                        </Link>
                         {isMe && (
                           <Badge variant="secondary" className="text-xs">
                             You
@@ -272,6 +304,9 @@ export function UsersTable({
                   <TableCell className="text-muted-foreground max-sm:hidden">
                     {formatDate(user.last_login_at)}
                   </TableCell>
+                  <TableCell className="max-lg:hidden">
+                    <UsageCell usage={user.usage} />
+                  </TableCell>
                   <TableCell>
                     {working(user) ? (
                       <span className="flex size-8 items-center justify-center" role="status">
@@ -292,6 +327,10 @@ export function UsersTable({
                           <MoreHorizontal />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuItem onClick={() => navigate(`/users/${user._id}`)}>
+                            <Activity />
+                            View activity
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setRenaming(user)}>
                             <Pencil />
                             Edit name

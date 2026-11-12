@@ -1,6 +1,10 @@
 import urls from "@/constants/urls"
 import { api, unwrap } from "@/lib/api"
 import type {
+  ActivityEntryPage,
+  ActivityRange,
+  ActivitySearchPage,
+  ActivitySummary,
   ApiEnvelope,
   CreatedUser,
   Role,
@@ -38,4 +42,35 @@ export async function updateUser(id: string, patch: UserPatch): Promise<User> {
 
 export async function deleteUser(id: string): Promise<void> {
   await api.delete(urls.deleteUser(id))
+}
+
+/** The admin's own time zone, so the chart's days are their days. */
+const timeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
+
+export async function getActivitySummary(id: string, days: ActivityRange): Promise<ActivitySummary> {
+  return unwrap(
+    await api.get<ApiEnvelope<ActivitySummary>>(urls.userActivitySummary(id), {
+      params: { days, tz: timeZone() },
+    })
+  )
+}
+
+export async function getActivitySearches(
+  id: string,
+  days: ActivityRange,
+  page: number
+): Promise<ActivitySearchPage> {
+  return unwrap(
+    await api.get<ApiEnvelope<ActivitySearchPage>>(urls.userActivitySearches(id), {
+      params: { days, page },
+    })
+  )
+}
+
+export async function getActivityEntries(id: string, before?: string): Promise<ActivityEntryPage> {
+  return unwrap(
+    await api.get<ApiEnvelope<ActivityEntryPage>>(urls.userActivityEvents(id), {
+      params: before ? { before } : undefined,
+    })
+  )
 }

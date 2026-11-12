@@ -141,6 +141,9 @@ export function toApiError({
       if (serverMessage === "Candidate not found") {
         return make("That candidate is no longer in the library", "They may have been removed.")
       }
+      if (serverMessage === "Resume not found") {
+        return make("There's no resume file for this candidate", "It may not have been uploaded yet.")
+      }
       if (serverMessage === "Not on your shortlist") {
         return make("That candidate isn't on your shortlist", "It may have been removed in another tab.")
       }

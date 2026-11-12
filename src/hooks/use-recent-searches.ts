@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { DEFAULT_OPTIONS } from "@/lib/search-options"
 import { browserStore } from "@/lib/storage"
 import type { SearchOptions } from "@/services/search"
 
@@ -12,8 +13,12 @@ const MAX_RECENT = 8
  */
 export function useRecentSearches(userId: string | undefined) {
   const key = userId ? `sar-recent:${userId}` : null
-  const [items, setItems] = useState<RecentSearch[]>(
-    () => (key && browserStore.read<RecentSearch[]>(key)) || []
+  // Settings added since a search was saved get their defaults.
+  const [items, setItems] = useState<RecentSearch[]>(() =>
+    ((key && browserStore.read<RecentSearch[]>(key)) || []).map((item) => ({
+      ...item,
+      options: { ...DEFAULT_OPTIONS, ...item.options },
+    }))
   )
 
   function save(next: RecentSearch[]) {

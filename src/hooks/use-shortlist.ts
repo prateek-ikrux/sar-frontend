@@ -14,12 +14,15 @@ import type { SearchProfile, ShortlistItem } from "@/types"
 
 const KEY = ["shortlist"] as const
 
-/** What a search result looks like on the shortlist, until the server replies. */
+/**
+ * What a search result looks like on the shortlist, until the server replies
+ * with the saved item, contact details included.
+ */
 const draftItem = (profile: SearchProfile, query: string): ShortlistItem => ({
   profileId: profile.id,
   fileName: profile.fileName,
-  email: profile.email,
-  phone: profile.phone,
+  email: null,
+  phone: null,
   summary: profile.summary ?? { name: null },
   query,
   note: "",

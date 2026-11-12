@@ -3,7 +3,7 @@ import { toast } from "sonner"
 
 import { ApiError, isAbort } from "@/lib/api"
 import { DEFAULT_OPTIONS } from "@/lib/search-options"
-import { tabStore } from "@/lib/storage"
+import { searchSessionKey, tabStore } from "@/lib/storage"
 import {
   endConversation,
   endConversationOnUnload,
@@ -67,7 +67,7 @@ const EMPTY: Session = {
 
 type Stored = { session: Session; options: SearchOptions }
 
-const storageKey = (userId: string) => `sar-search:${userId}`
+const storageKey = searchSessionKey
 
 /**
  * The server pins only profiles with a resume file, in result order, and the
@@ -94,10 +94,12 @@ function restore(userId: string | undefined): Stored | null {
   const stored = tabStore.read<Stored>(storageKey(userId))
   if (!stored?.session) return null
   return {
-    options: stored.options ?? DEFAULT_OPTIONS,
+    // Merged, so settings added since the session was saved get their defaults.
+    options: { ...DEFAULT_OPTIONS, ...stored.options },
     session: {
       ...EMPTY,
       ...stored.session,
+      pinnedOptions: { ...DEFAULT_OPTIONS, ...stored.session.pinnedOptions },
       messages: stored.session.messages.flatMap((m): ChatMessage[] => {
         if (m.role === "user" && m.status === "pending") return [{ ...m, status: "failed" }]
         if (m.role === "assistant" && m.streaming) {

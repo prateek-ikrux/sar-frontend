@@ -35,3 +35,6 @@ export const browserStore = {
   read: <T>(key: string) => read<T>(local, key),
   write: (key: string, value: unknown) => write(local, key, value),
 }
+
+/** Where a user's search session (results and chat) is kept for this tab. */
+export const searchSessionKey = (userId: string) => `sar-search:${userId}`

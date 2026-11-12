@@ -48,8 +48,26 @@ export default function LoginPage() {
   const [misses, setMisses] = useState(0)
   const [error, setError] = useState<{ title: string; detail?: string } | null>(null)
 
-  const redirectTo =
-    (location.state as { from?: string } | null)?.from ?? "/search"
+  // Read once, before signing in replaces them.
+  const [ended] = useState(() => {
+    const { endedBecause, endedUserId } = useAuthStore.getState()
+    return { endedBecause, endedUserId }
+  })
+  const signedInId = useAuthStore((s) => s.user?._id)
+  const from = (location.state as { from?: string } | null)?.from
+  // The page that was open, often a search, is someone's own work. Go back to
+  // it after an expiry only if the same person signs in again; after a sign
+  // out, or for anyone else, start on a fresh search. A link followed while
+  // signed out (no session ended) still lands where it pointed.
+  const returnTo =
+    ended.endedBecause === "signed-out"
+      ? null
+      : ended.endedBecause === "expired"
+        ? ended.endedUserId === signedInId
+          ? from
+          : null
+        : from
+  const redirectTo = returnTo ?? "/search"
   const codeSpent = misses >= OTP_MAX_ATTEMPTS
 
   useEffect(() => {

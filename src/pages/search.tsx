@@ -7,6 +7,7 @@ import { ChatPanel, type CitedCandidate } from "@/components/search/chat-panel"
 import { Hint } from "@/components/search/hint"
 import { candidateName, ResultCard } from "@/components/search/result-card"
 import { SearchBar } from "@/components/search/search-bar"
+import { CardKeyButton, EdgeNote } from "@/components/search/team-activity"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,14 +38,18 @@ import {
 } from "@/components/ui/empty"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Spinner } from "@/components/ui/spinner"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { DESKTOP_QUERY, REDUCED_MOTION_QUERY, useMediaQuery } from "@/hooks/use-media-query"
 import { useRecentSearches } from "@/hooks/use-recent-searches"
 import { useSearchSession } from "@/hooks/use-search-session"
 import { useShortlist } from "@/hooks/use-shortlist"
+import type { ApiError } from "@/lib/api"
 import { downloadCsv, slug } from "@/lib/csv"
 import { depthLabel, optionsFromParams, searchParamsFor } from "@/lib/search-options"
+import { workedOnByOthers } from "@/lib/team"
 import { cn } from "@/lib/utils"
+import { exportContacts } from "@/services/candidates"
 import type { SearchOptions } from "@/services/search"
 import { useAuthStore } from "@/stores/auth-store"
 import type { SearchProfile } from "@/types"
@@ -81,6 +86,7 @@ export default function SearchPage() {
   const [hovered, setHovered] = useState<string | null>(null)
   const [flashed, setFlashed] = useState<string | null>(null)
   const [preview, setPreview] = useState<CitedCandidate | null>(null)
+  const [exporting, setExporting] = useState(false)
   const [pendingDiscard, setPendingDiscard] = useState<{
     run: () => void
     decline?: () => void
@@ -105,6 +111,8 @@ export default function SearchPage() {
   const byId = new Map((profiles ?? []).map((p) => [p.id, p]))
   const pinnedCount = profiles ? profiles.filter((p) => numberOf.has(p.id)).length : null
   const unpinned = (profiles?.length ?? 0) - (pinnedCount ?? 0)
+  // As the search returned them; a tag set since then shows on its card only.
+  const flaggedCount = (profiles ?? []).filter((p) => workedOnByOthers(p.team)).length
 
   const lookup = (id: string): CitedCandidate | undefined => {
     const profile = byId.get(id)
@@ -215,20 +223,36 @@ export default function SearchPage() {
     setTimeout(() => flash(id), 50)
   }
 
-  function exportCsv() {
-    if (!profiles?.length) return
-    downloadCsv(`candidates-${slug(session.query)}.csv`, [
-      ["#", "Candidate", "Resume file", "Email", "Phone", "Relevance", "Resume link (expires within 24 hours)"],
-      ...profiles.map((p) => [
-        numberOf.get(p.id) ?? "",
-        candidateName(p),
-        p.fileName,
-        p.email,
-        p.phone,
-        p.score.toFixed(3),
-        p.resumeUrl ?? "",
-      ]),
-    ])
+  // Contact details aren't in the results, so the server supplies them for
+  // the spreadsheet, and records that these candidates left the platform.
+  async function exportCsv() {
+    if (!profiles?.length || exporting) return
+    setExporting(true)
+    try {
+      const contacts = await exportContacts({
+        profileIds: profiles.map((p) => p.id),
+        source: "search",
+        query: session.query,
+      })
+      const contactOf = new Map(contacts.map((c) => [c.profileId, c]))
+      downloadCsv(`candidates-${slug(session.query)}.csv`, [
+        ["#", "Candidate", "Resume file", "Email", "Phone", "Relevance", "Resume link (expires within 24 hours)"],
+        ...profiles.map((p) => [
+          numberOf.get(p.id) ?? "",
+          candidateName(p),
+          p.fileName,
+          contactOf.get(p.id)?.email,
+          contactOf.get(p.id)?.phone,
+          p.score.toFixed(3),
+          p.resumeUrl ?? "",
+        ]),
+      ])
+    } catch (error) {
+      const apiError = error as ApiError
+      toast.error(apiError.message ?? "Couldn't export the candidates", { description: apiError.detail })
+    } finally {
+      setExporting(false)
+    }
   }
 
   async function copyLink() {
@@ -439,16 +463,28 @@ export default function SearchPage() {
                     but not in the chat
                   </CardDescription>
                 )}
+                {flaggedCount > 0 && (
+                  <div className="pt-1">
+                    <EdgeNote count={flaggedCount} />
+                  </div>
+                )}
                 {profiles && profiles.length > 0 && (
                   <CardAction className="flex gap-1">
+                    <CardKeyButton />
                     <Hint label="Copy a link to this search">
                       <Button variant="ghost" size="icon-sm" aria-label="Copy a link to this search" onClick={() => void copyLink()}>
                         <Link2 />
                       </Button>
                     </Hint>
                     <Hint label="Download these candidates as a spreadsheet (CSV)">
-                      <Button variant="ghost" size="icon-sm" aria-label="Download candidates as CSV" onClick={exportCsv}>
-                        <Download />
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Download candidates as CSV"
+                        disabled={exporting}
+                        onClick={() => void exportCsv()}
+                      >
+                        {exporting ? <Spinner /> : <Download />}
                       </Button>
                     </Hint>
                   </CardAction>
