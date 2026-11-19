@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react"
-import { Navigate, useLocation } from "react-router"
+import { Link, Navigate, useLocation } from "react-router"
 import { useMutation } from "@tanstack/react-query"
 import { AlertCircle, ArrowLeft, Clock, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { PasswordInput } from "@/components/auth/password-input"
 import { Label } from "@/components/ui/label"
 import {
   InputOTP,
@@ -40,6 +41,8 @@ export default function LoginPage() {
 
   const [step, setStep] = useState<"email" | "otp">("email")
   const [email, setEmail] = useState("")
+  // Held so "Resend code" can ask again without making them retype it.
+  const [password, setPassword] = useState("")
   const [otp, setOtp] = useState("")
   const [secondsLeft, setSecondsLeft] = useState(0)
   const [expiresAt, setExpiresAt] = useState<Date | null>(null)
@@ -77,7 +80,7 @@ export default function LoginPage() {
   }, [secondsLeft])
 
   const sendOtp = useMutation({
-    mutationFn: () => requestOtp(email.trim()),
+    mutationFn: () => requestOtp(email.trim(), password),
     onSuccess: (challenge) => {
       if (step === "otp") {
         // The server answers the same for every address, so this can't
@@ -99,7 +102,10 @@ export default function LoginPage() {
   const submitOtp = useMutation({
     mutationFn: (code: string) => verifyOtp(email.trim(), code),
     // Storing the session is enough: the signedIn redirect below takes over.
-    onSuccess: (session) => setSession(session),
+    onSuccess: (session) => {
+      setPassword("")
+      setSession(session)
+    },
     onError: (e: ApiError) => {
       setOtp("")
       if (e.status === 401) {
@@ -134,6 +140,7 @@ export default function LoginPage() {
 
   function changeEmail() {
     setStep("email")
+    setPassword("")
     setOtp("")
     setMisses(0)
     setError(null)
@@ -182,8 +189,8 @@ export default function LoginPage() {
                 <h1>Sign in</h1>
               </CardTitle>
               <CardDescription>
-                Enter your ikrux email and we&rsquo;ll send you a sign-in
-                code. There&rsquo;s no password.
+                Enter your ikrux email and password. We&rsquo;ll then email
+                you a sign-in code.
               </CardDescription>
             </>
           ) : (
@@ -208,7 +215,7 @@ export default function LoginPage() {
               className="space-y-4"
               onSubmit={(event) => {
                 event.preventDefault()
-                if (email.trim()) sendOtp.mutate()
+                if (email.trim() && password) sendOtp.mutate()
               }}
             >
               <div className="space-y-2">
@@ -229,15 +236,43 @@ export default function LoginPage() {
                   aria-invalid={Boolean(error) || undefined}
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <PasswordInput
+                  id="password"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(event) => {
+                    setPassword(event.target.value)
+                    setError(null)
+                  }}
+                  disabled={sendOtp.isPending}
+                  aria-invalid={Boolean(error) || undefined}
+                />
+              </div>
               {errorAlert}
               <Button
                 type="submit"
                 className="w-full"
-                disabled={!email.trim() || sendOtp.isPending}
+                disabled={!email.trim() || !password || sendOtp.isPending}
               >
                 {sendOtp.isPending && <Loader2 className="animate-spin" />}
-                Send code
+                Continue
               </Button>
+              <div className="flex flex-col items-center gap-1">
+                <Link
+                  to="/forgot-password"
+                  className={buttonVariants({ variant: "link", size: "sm" })}
+                >
+                  Forgot password?
+                </Link>
+                {/* Nobody is given a password: everyone sets their first
+                    one through the reset flow. */}
+                <p className="text-center text-xs text-muted-foreground">
+                  First time signing in? Use Forgot password to set yours.
+                </p>
+              </div>
             </form>
           ) : (
             <div className="space-y-4">

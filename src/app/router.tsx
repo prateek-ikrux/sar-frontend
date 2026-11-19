@@ -23,9 +23,21 @@ export const router = createBrowserRouter([
         ErrorBoundary: RouteError,
       },
       {
+        path: "/forgot-password",
+        lazy: lazyPage(() => import("@/pages/forgot-password")),
+        ErrorBoundary: RouteError,
+      },
+      {
         Component: RequireAuth,
         ErrorBoundary: RouteError,
         children: [
+          {
+            // Outside the layout: a forced user has no nav to pages they
+            // can't use yet.
+            path: "/change-password",
+            lazy: lazyPage(() => import("@/pages/change-password")),
+            ErrorBoundary: RouteError,
+          },
           {
             Component: RootLayout,
             children: [

@@ -65,7 +65,11 @@ export function RequireAuth() {
           : "Your role changed to recruiter."
       )
     }
-    if (fresh.role !== stored.role || fresh.name !== stored.name || fresh.email !== stored.email) {
+    if (
+      fresh.role !== stored.role ||
+      fresh.name !== stored.name ||
+      fresh.email !== stored.email
+    ) {
       setUser(fresh)
     }
   }, [me.data, setUser])

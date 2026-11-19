@@ -17,6 +17,22 @@ export async function listUsers(params?: UserListParams): Promise<UserPage> {
   return unwrap(await api.get<ApiEnvelope<UserPage>>(urls.getUsers, { params }))
 }
 
+/** The largest page the server serves (listUsersQuerySchema's limit). */
+const MAX_PAGE_SIZE = 100
+
+/**
+ * Every user matching the filters, in the given order, gathered page by page
+ * since the list endpoint serves at most 100 at a time.
+ */
+export async function listAllUsers(params?: Omit<UserListParams, "page" | "limit">): Promise<User[]> {
+  const users: User[] = []
+  for (let page = 1; ; page++) {
+    const batch = await listUsers({ ...params, page, limit: MAX_PAGE_SIZE })
+    users.push(...batch.users)
+    if (page >= batch.pages) return users
+  }
+}
+
 export async function getUser(id: string): Promise<User> {
   return unwrap(await api.get<ApiEnvelope<User>>(urls.getUser(id)))
 }

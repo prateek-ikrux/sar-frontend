@@ -2,6 +2,9 @@
 const urls = {
   requestOtp: "/auth/request-otp",
   verifyOtp: "/auth/verify-otp",
+  forgotPassword: "/auth/forgot-password",
+  resetPassword: "/auth/reset-password",
+  changePassword: "/auth/change-password",
   me: "/auth/me",
   getUsers: "/users/list",
   createUser: "/users/create",

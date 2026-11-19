@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react"
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router"
-import { Activity, Bookmark, LogOut, Monitor, Moon, Search, Sun, Users } from "lucide-react"
+import { Activity, Bookmark, KeyRound, LogOut, Monitor, Moon, Search, Sun, Users } from "lucide-react"
 
 import { Lockup } from "@/components/brand/wordmark"
 import { useTheme, type Theme } from "@/components/theme-provider"
@@ -150,6 +150,10 @@ export function RootLayout() {
                   </DropdownMenuRadioGroup>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/change-password")}>
+                  <KeyRound />
+                  Change password
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
                     logout("signed-out")

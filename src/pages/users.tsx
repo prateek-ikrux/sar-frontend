@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { ChevronLeft, ChevronRight, Search, TriangleAlert, UserX } from "lucide-react"
+import { ChevronLeft, ChevronRight, Download, Loader2, Search, TriangleAlert, UserX } from "lucide-react"
+import { toast } from "sonner"
 
 import { AddUserDialog } from "@/components/users/add-user-dialog"
 import { UsersTable, type SortState } from "@/components/users/users-table"
@@ -19,9 +20,10 @@ import {
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { listUsers } from "@/services/users"
+import { listAllUsers, listUsers } from "@/services/users"
 import type { ApiError } from "@/lib/api"
-import type { Role, UserPage } from "@/types"
+import { downloadCsv } from "@/lib/csv"
+import type { Role, User, UserPage } from "@/types"
 
 type RoleFilter = Role | "all"
 type StatusFilter = "active" | "disabled" | "all"
@@ -37,6 +39,30 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: "active", label: "Active" },
   { value: "disabled", label: "Disabled" },
 ]
+
+// Local time as "2026-11-19 14:05": sorts correctly as text, and spreadsheets
+// read it as a date.
+function spreadsheetTime(iso: string | null | undefined) {
+  if (!iso) return ""
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function usersCsvRows(users: User[]) {
+  return [
+    ["Name", "Email", "Role", "Status", "Added", "Last sign-in", "Last active"],
+    ...users.map((user) => [
+      user.name,
+      user.email,
+      user.role === "admin" ? "Admin" : "Recruiter",
+      user.active ? "Active" : "Disabled",
+      spreadsheetTime(user.created_at),
+      spreadsheetTime(user.last_login_at),
+      spreadsheetTime(user.usage?.lastActiveAt),
+    ]),
+  ]
+}
 
 export default function UsersPage() {
   useDocumentTitle("Users")
@@ -82,6 +108,31 @@ export default function UsersPage() {
     setPage(data.pages)
   }
 
+  const [exporting, setExporting] = useState(false)
+
+  // Everyone matching the current search and filters, not just this page, in
+  // the table's order. With no filters that is every user.
+  async function exportCsv() {
+    if (exporting) return
+    setExporting(true)
+    try {
+      const users = await listAllUsers({
+        q: q || undefined,
+        role: role === "all" ? undefined : role,
+        status: status === "all" ? undefined : status,
+        sort: sort.by,
+        order: sort.order,
+      })
+      const date = spreadsheetTime(new Date().toISOString()).slice(0, 10)
+      downloadCsv(filtered ? `users-filtered-${date}.csv` : `users-${date}.csv`, usersCsvRows(users))
+    } catch (error) {
+      const apiError = error as ApiError
+      toast.error(apiError.message ?? "Couldn't export the users", { description: apiError.detail })
+    } finally {
+      setExporting(false)
+    }
+  }
+
   function clearFilters() {
     setTyped("")
     setQ("")
@@ -103,11 +154,21 @@ export default function UsersPage() {
             )}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Active users sign in with a code emailed to them. Admins can also
-            manage this list.
+            Active users sign in with their password and a code emailed to
+            them. Admins can also manage this list.
           </p>
         </div>
-        <AddUserDialog />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => void exportCsv()}
+            disabled={exporting || !data?.total}
+          >
+            {exporting ? <Loader2 className="animate-spin" /> : <Download />}
+            {filtered ? "Export filtered" : "Export all"}
+          </Button>
+          <AddUserDialog />
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

@@ -57,7 +57,7 @@ export function AddUserDialog() {
         toast.success(who, { description: `We've emailed ${user.email} to let them know.` })
       } else {
         toast.warning(who, {
-          description: `We couldn't email ${user.email}, so let them know yourself.`,
+          description: `We couldn't email ${user.email}, so let them know yourself. They set their password with "Forgot password" on the sign-in page.`,
           duration: 10_000,
         })
       }
@@ -96,8 +96,9 @@ export function AddUserDialog() {
           <DialogHeader>
             <DialogTitle>Add user</DialogTitle>
             <DialogDescription>
-              We&rsquo;ll email them to say they have access. They sign in
-              with a code sent to this address: no password, nothing to set up.
+              We&rsquo;ll email them to say they have access. They set their
+              own password with &ldquo;Forgot password&rdquo; on the sign-in
+              page, then sign in with it plus a code sent to this address.
             </DialogDescription>
           </DialogHeader>
 

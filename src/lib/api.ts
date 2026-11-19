@@ -59,6 +59,9 @@ const FIELD_LABELS: Record<string, string> = {
   name: "Name",
   role: "Role",
   code: "The code",
+  password: "Password",
+  currentPassword: "Current password",
+  newPassword: "New password",
   query: "Your search",
   question: "Your question",
   limit: "Results",
@@ -122,9 +125,20 @@ export function toApiError({
 
   switch (status) {
     case 401:
-      return url.includes(urls.verifyOtp)
+      // Sent without a token, so none of these end a session (see endSessionOn401).
+      if (url.includes(urls.requestOtp)) {
+        return make("Incorrect email or password", "Check both and try again.")
+      }
+      return url.includes(urls.verifyOtp) || url.includes(urls.resetPassword)
         ? make("That code didn't work", "Check it and try again, or request a new code.")
         : make("Your session has ended", "Sign in again to continue.")
+    case 400:
+      // Changing a password: the one 400 a form needs to put on its field.
+      if (serverMessage === "Current password is incorrect") {
+        const line = "Check it and try again."
+        return make("Current password is incorrect", line, { currentPassword: line })
+      }
+      return make("That didn't work", "Try again. If it keeps happening, tell an admin.")
     case 403:
       // A bare "Forbidden" is the role check; the other 403s already say
       // what went wrong in the user's terms.
@@ -200,9 +214,14 @@ export const api = axios.create({
   headers: { "Content-Type": "application/json" },
 })
 
+// Reachable without signing in. A token must not ride along: a wrong code
+// answers 401, which would end the session of someone who is signed in.
+const PUBLIC_PATHS = [urls.requestOtp, urls.verifyOtp, urls.forgotPassword, urls.resetPassword]
+
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token
-  if (token && !config.headers.Authorization) {
+  const isPublic = PUBLIC_PATHS.some((path) => config.url?.includes(path))
+  if (token && !isPublic && !config.headers.Authorization) {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
